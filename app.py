@@ -127,8 +127,18 @@ def available_slots(staff_id: int, iso_date: str, duration_min: int, step_min: i
         t += step_min
     return slots
 
-def seed():
+def seed_demo_data():
+    """Create tables and insert demo data once.
+
+    NOTE: When deployed with gunicorn, the `__main__` block does NOT run.
+    So we initialize the DB during app startup to avoid "no such table".
+    """
     db.create_all()
+
+    # (προαιρετικό) αν θες κάποτε να το κλείσεις:
+    if (os.environ.get("SEED_DEMO_DATA", "1") or "1").strip() not in ("1","true","TRUE","yes","YES"):
+        return
+
     if Shop.query.count() > 0:
         return
     s1 = Shop(name="EHair Studio Chania", city="Χανιά", area="Κέντρο", category="Hair",
@@ -165,6 +175,11 @@ def seed():
         Review(shop_id=s2.id, customer_name="Κώστας", rating=5, comment="Γρήγορο και προσεγμένο κούρεμα.")
     ])
     db.session.commit()
+
+
+   with app.app_context():
+    seed_demo_data()
+
 
 @app.route("/", methods=["GET"])
 def home():
@@ -469,6 +484,7 @@ def healthz():
 
 if __name__ == "__main__":
     with app.app_context():
-        seed()
+        seed_demo_data()
     port = int(os.environ.get("PORT", "5000"))
     app.run(host="0.0.0.0", port=port, debug=True)
+

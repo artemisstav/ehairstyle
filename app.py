@@ -177,7 +177,7 @@ def seed_demo_data():
     db.session.commit()
 
 
-   with app.app_context():
+with app.app_context():
     seed_demo_data()
 
 
@@ -483,8 +483,7 @@ def healthz():
     return {"ok": True}
 
 if __name__ == "__main__":
-    with app.app_context():
-        seed_demo_data()
     port = int(os.environ.get("PORT", "5000"))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 

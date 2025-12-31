@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="fs-3 fw-bold">Admin</div>
+  <form method="post" action="{{ url_for('admin_logout') }}">
+    <button class="btn btn-outline-secondary">Logout</button>
+  </form>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header fw-bold">➕ Νέο κατάστημα</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('admin_shop_new') }}" class="row g-2">
+          <div class="col-md-6"><input class="form-control" name="name" placeholder="Όνομα" required></div>
+          <div class="col-md-6"><input class="form-control" name="category" placeholder="Category (Hair/Barber)" value="Hair"></div>
+          <div class="col-md-6"><input class="form-control" name="city" placeholder="Πόλη" value="Χανιά"></div>
+          <div class="col-md-6"><input class="form-control" name="area" placeholder="Περιοχή"></div>
+          <div class="col-md-6"><input class="form-control" name="phone" placeholder="Τηλέφωνο"></div>
+          <div class="col-md-6"><input class="form-control" name="address" placeholder="Διεύθυνση"></div>
+          <div class="col-12"><textarea class="form-control" name="description" rows="2" placeholder="Περιγραφή"></textarea></div>
+          <div class="col-12 d-grid"><button class="btn btn-primary">Προσθήκη</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header fw-bold">➕ Νέος υπάλληλος</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('admin_staff_new') }}" class="row g-2">
+          <div class="col-12">
+            <label class="form-label">Κατάστημα</label>
+            <select class="form-select" name="shop_id">
+              {% for s in shops %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6"><input class="form-control" name="name" placeholder="Όνομα υπαλλήλου" required></div>
+          <div class="col-md-6"><input class="form-control" name="title" placeholder="Τίτλος (π.χ. Barber)"></div>
+          <div class="col-12 d-grid"><button class="btn btn-success">Προσθήκη</button></div>
+        </form>
+        <div class="small-muted mt-2">Default ωράριο Τρ-Σα 10:00-18:00.</div>
+        <div class="small-muted">Αλλαγή ωραρίου: <code>/admin/hours/&lt;staff_id&gt;</code></div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header fw-bold">➕ Νέα υπηρεσία</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('admin_service_new') }}" class="row g-2">
+          <div class="col-12">
+            <label class="form-label">Κατάστημα</label>
+            <select class="form-select" name="shop_id">
+              {% for s in shops %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6"><input class="form-control" name="name" placeholder="Όνομα υπηρεσίας" required></div>
+          <div class="col-md-3"><input class="form-control" type="number" name="duration" placeholder="Διάρκεια (min)" value="30"></div>
+          <div class="col-md-3"><input class="form-control" name="price" placeholder="Τιμή (π.χ. 13,00)" value="0"></div>
+          <div class="col-12 d-grid"><button class="btn btn-outline-primary">Προσθήκη</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header fw-bold">📅 Ραντεβού (τελευταία 100)</div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Ημ/νία</th>
+                <th>Ώρα</th>
+                <th>Πελάτης</th>
+                <th>Shop ID</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in appts %}
+                <tr>
+                  <td>{{ a.id }}</td>
+                  <td>{{ a.appt_date }}</td>
+                  <td>{{ a.start_hm }}-{{ a.end_hm }}</td>
+                  <td>
+                    <div class="fw-bold">{{ a.customer_name }}</div>
+                    <div class="small-muted">{{ a.phone }}</div>
+                  </td>
+                  <td>{{ a.shop_id }}</td>
+                  <td><span class="badge text-bg-primary">{{ a.status }}</span></td>
+                  <td>
+                    {% if a.status != "Ακυρωμένο" %}
+                      <form method="post" action="{{ url_for('admin_cancel_appt', aid=a.id) }}">
+                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Ακύρωση ραντεβού;')">Cancel</button>
+                      </form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

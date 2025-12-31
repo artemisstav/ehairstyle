@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <div class="fs-3 fw-bold">✅ Το ραντεβού καταχωρήθηκε!</div>
+    <div class="small-muted">#{{ appt.id }} • Status: <span class="badge text-bg-primary">{{ appt.status }}</span></div>
+    <hr>
+    <div class="fw-bold">{{ shop.name }}</div>
+    <div class="small-muted">{{ appt.appt_date }} • {{ appt.start_hm }} - {{ appt.end_hm }}</div>
+    <div class="small-muted">Υπάλληλος: {{ staff.name }} • Υπηρεσία: {{ service.name }}</div>
+    <div class="small-muted mt-2">Πληρωμή: {{ "Στο κατάστημα" if appt.payment_method=="store" else "Online (demo)" }}</div>
+    <hr>
+    <div class="fs-5 fw-bold">Τιμή: {{ cents_to_eur(service.price_cents) }} €</div>
+    <div class="mt-3 d-flex gap-2">
+      <a class="btn btn-primary" href="{{ url_for('shop_detail', sid=shop.id) }}">Πίσω στο κατάστημα</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('home') }}">Αρχική</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

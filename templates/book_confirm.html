@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-body">
+        <div class="fs-4 fw-bold">Επιβεβαίωση ραντεβού</div>
+        <div class="small-muted">{{ shop.name }}</div>
+
+        <form method="post" class="mt-3">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label">Όνομα</label>
+              <input class="form-control" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Τηλέφωνο</label>
+              <input class="form-control" name="phone" placeholder="+30..." required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Σημειώσεις (προαιρετικό)</label>
+              <textarea class="form-control" name="notes" rows="3"></textarea>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <div class="fw-bold mb-2">Τρόπος πληρωμής</div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="payment" value="store" checked>
+              <label class="form-check-label">Στο κατάστημα</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="payment" value="online">
+              <label class="form-check-label">Online (demo επιλογή — δεν γίνεται χρέωση)</label>
+            </div>
+          </div>
+
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" name="accept" id="accept" required>
+            <label class="form-check-label" for="accept">
+              Αποδέχομαι τους όρους χρήσης και την πολιτική απορρήτου (demo).
+            </label>
+          </div>
+
+          <button class="btn btn-success w-100 mt-3">Κλείσε ραντεβού</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-body">
+        <div class="fw-bold mb-2">Σύνοψη</div>
+        <div class="small-muted">{{ st.appt_date }} • {{ st.start_hm }} - {{ st.end_hm }}</div>
+        <hr>
+        <div class="d-flex justify-content-between">
+          <div class="small-muted">Υπηρεσία</div>
+          <div class="fw-bold">{{ service.name }}</div>
+        </div>
+        <div class="d-flex justify-content-between">
+          <div class="small-muted">Διάρκεια</div>
+          <div>{{ service.duration_min }}'</div>
+        </div>
+        <div class="d-flex justify-content-between">
+          <div class="small-muted">Υπάλληλος</div>
+          <div>{{ staff.name }}</div>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between fs-5 fw-bold">
+          <div>Τιμή</div>
+          <div>{{ cents_to_eur(service.price_cents) }} €</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

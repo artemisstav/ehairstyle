@@ -1,0 +1,7 @@
+:root { --card-radius: 14px; }
+body { background: #f6f7fb; }
+.card { border: 0; border-radius: var(--card-radius); box-shadow: 0 8px 24px rgba(16,24,40,.06); }
+.badge { border-radius: 999px; }
+a { text-decoration: none; }
+.small-muted { color: #667085; font-size: .9rem; }
+.navbar-brand { letter-spacing: .4px; }

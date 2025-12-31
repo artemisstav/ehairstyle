@@ -1,0 +1,3 @@
+# Install this only if you will use Postgres (public hosting).
+# For local use (SQLite), you don't need it.
+psycopg2-binary==2.9.9

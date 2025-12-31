@@ -12,6 +12,10 @@ def create_app():
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
+    if db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+    
     if not db_url:
         db_url = "sqlite:///data.db"
 

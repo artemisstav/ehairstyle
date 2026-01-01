@@ -1,78 +1,88 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row g-3 mb-3">
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-body">
-        <div class="fs-4 fw-bold mb-1">Βρες κατάστημα</div>
-        <div class="small-muted">Online ραντεβού σε λίγα βήματα.</div>
-        <form method="get" class="row g-2 mt-3">
-          <div class="col-md-5">
-            <input class="form-control" name="q" value="{{ q }}" placeholder="Αναζήτηση (όνομα καταστήματος)">
-          </div>
-          <div class="col-md-3">
-            <select class="form-select" name="city">
-              <option value="">Όλες οι πόλεις</option>
-              {% for c in cities %}
-                <option value="{{ c }}" {% if city==c %}selected{% endif %}>{{ c }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-2">
-            <select class="form-select" name="cat">
-              <option value="">Όλες</option>
-              {% for c in cats %}
-                <option value="{{ c }}" {% if category==c %}selected{% endif %}>{{ c }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-2 d-grid">
-            <button class="btn btn-primary">Αναζήτηση</button>
-          </div>
-        </form>
-      </div>
+
+<div class="hero-wrap">
+  <div class="hero-overlay">
+    <div class="text-center text-white mb-4">
+      <div class="hero-kicker">Η ΠΡΩΤΗ ΚΟΙΝΟΤΗΤΑ BARBERS ΣΤΗΝ ΕΛΛΑΔΑ</div>
+      <h1 class="hero-title">Κλείσε το ραντεβού σου online</h1>
     </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card">
-      <div class="card-body">
-        <div class="fw-bold">Πώς δουλεύει</div>
-        <ol class="small-muted mt-2 mb-0">
-          <li>Διάλεξε κατάστημα</li>
-          <li>Ημερομηνία, υπηρεσία, υπάλληλο</li>
-          <li>Επιβεβαίωση ραντεβού</li>
-        </ol>
+
+    <form method="get" action="{{ url_for('home') }}" class="hero-search" id="heroSearchForm">
+
+      <!-- Πότε -->
+      <input
+        class="form-control hero-input"
+        id="whenInput"
+        name="when"
+        type="text"
+        placeholder="Πότε;"
+        autocomplete="off"
+      />
+
+      <div class="hero-divider"></div>
+
+      <!-- Πού -->
+      <div class="dropdown hero-loc">
+        <button class="btn hero-loc-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="whereBtn">
+          Πού;
+        </button>
+        <div class="dropdown-menu p-3 hero-loc-menu">
+          <input class="form-control mb-2" name="where" id="whereInput" placeholder="Διεύθυνση / Πόλη" autocomplete="off">
+
+          <button type="button" class="btn btn-outline-light w-100" id="nearMeBtn">
+            📍 Κοντά μου
+          </button>
+
+          <input type="hidden" name="lat" id="latInput">
+          <input type="hidden" name="lon" id="lonInput">
+
+          <div class="small text-white-50 mt-2" id="nearMeStatus"></div>
+        </div>
       </div>
-    </div>
+
+      <!-- Αναζήτηση -->
+      <button class="btn btn-primary hero-search-btn px-4" type="submit">
+        🔍 ΑΝΑΖΗΤΗΣΗ
+      </button>
+    </form>
   </div>
 </div>
 
-<div class="row g-3">
-  {% for s in shops %}
-    <div class="col-md-4">
-      <a href="{{ url_for('shop_detail', sid=s.id) }}">
-        <div class="card h-100">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <div class="fs-5 fw-bold">{{ s.name }}</div>
-                <div class="small-muted">{{ s.city }}{% if s.area %} • {{ s.area }}{% endif %}</div>
-              </div>
-              {% if s.is_open %}
-                <span class="badge text-bg-success">Open</span>
-              {% else %}
-                <span class="badge text-bg-secondary">Closed</span>
-              {% endif %}
-            </div>
-            <div class="mt-2 small-muted">Κατηγορία: {{ s.category }}</div>
-            <div class="mt-2 small-muted">{{ (s.description or "")[:120] }}{% if (s.description or "")|length>120 %}...{% endif %}</div>
-          </div>
-          <div class="card-footer bg-white border-0">
-            <span class="btn btn-outline-primary w-100">Δες & κλείσε ραντεβού</span>
-          </div>
-        </div>
-      </a>
-    </div>
-  {% endfor %}
-</div>
+<!-- Εδώ κάτω αφήνεις όπως έχεις τα results/listing -->
+<!-- π.χ. τα cards με shops, φίλτρα κλπ -->
+
+<script>
+  // Calendar στο "Πότε"
+  if (window.flatpickr) {
+    flatpickr("#whenInput", {
+      dateFormat: "Y-m-d",
+      minDate: "today"
+    });
+  }
+
+  // "Κοντά μου"
+  const nearBtn = document.getElementById("nearMeBtn");
+  const statusEl = document.getElementById("nearMeStatus");
+
+  nearBtn?.addEventListener("click", () => {
+    statusEl.textContent = "Εντοπίζω τοποθεσία...";
+    if (!navigator.geolocation) {
+      statusEl.textContent = "Ο browser δεν υποστηρίζει τοποθεσία.";
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        document.getElementById("latInput").value = pos.coords.latitude;
+        document.getElementById("lonInput").value = pos.coords.longitude;
+        statusEl.textContent = "ΟΚ! Θα ψάξω κοντά σου.";
+      },
+      () => {
+        statusEl.textContent = "Δεν δόθηκε άδεια τοποθεσίας.";
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  });
+</script>
+
 {% endblock %}

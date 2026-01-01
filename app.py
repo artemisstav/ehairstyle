@@ -350,6 +350,13 @@ def book_step3(sid: int):
 
     return render_template("book_step3.html", app_name=APP_NAME, shop=shop, staff=staff, st=st)
 
+
+@app.route("/business")
+def business():
+    return render_template("business.html", app_name=APP_NAME)
+
+
+
 @app.route("/book/<int:sid>/step4", methods=["GET", "POST"])
 def book_step4(sid: int):
     shop = Shop.query.get_or_404(sid)

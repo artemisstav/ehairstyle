@@ -5,3 +5,62 @@ body { background: #f6f7fb; }
 a { text-decoration: none; }
 .small-muted { color: #667085; font-size: .9rem; }
 .navbar-brand { letter-spacing: .4px; }
+.business-hero{
+  min-height: 100vh;
+  background: #111;
+}
+
+.business-overlay{
+  min-height: 100vh;
+  background: rgba(0,0,0,0.55);
+}
+
+.price-card{
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  text-align: center;
+}
+
+.price-top{
+  height: 6px;
+  background: #2f4bff; /* μπλε γραμμή πάνω */
+}
+
+.price-title{
+  letter-spacing: .25em;
+  font-weight: 700;
+  color: #2f4bff;
+  font-size: 0.95rem;
+}
+
+.price-big{
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #343a40;
+  margin-top: .5rem;
+}
+
+.price-num{
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #343a40;
+}
+
+.price-per{
+  color: #6c757d;
+}
+
+.price-sub{
+  font-size: 1.15rem;
+}
+
+.price-accent{
+  color: #2f4bff;
+  font-weight: 800;
+}
+
+.price-foot{
+  font-weight: 700;
+}

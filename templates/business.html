@@ -1,17 +1,204 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container my-5">
-  <div class="card">
-    <div class="card-body">
-      <h1 class="fw-bold mb-2">Για Επιχειρήσεις</h1>
-      <p class="text-muted">
-        Online κρατήσεις, διαχείριση προσωπικού, υπηρεσιών και ραντεβού από ένα dashboard.
-      </p>
-      <div class="d-flex gap-2">
-        <a class="btn btn-primary" href="{{ url_for('admin_login') }}">Δες Demo Admin</a>
-        <a class="btn btn-outline-secondary" href="{{ url_for('home') }}">Πίσω στην αρχική</a>
+
+<div class="business-hero">
+  <div class="business-overlay">
+    <div class="container py-5 text-center text-white">
+
+      <h1 class="fw-bold mb-3">Επίλεξε το πλάνο που σου ταιριάζει.</h1>
+
+      <div class="d-flex justify-content-center align-items-center gap-3 mb-2">
+        <span class="small">Μηνιαίο</span>
+
+        <div class="form-check form-switch m-0">
+          <input class="form-check-input" type="checkbox" id="billingSwitch">
+        </div>
+
+        <span class="small">Ετήσιο</span>
       </div>
+
+      <div class="small opacity-75 mb-4">*Οι παρακάτω τιμές δεν περιλαμβάνουν Φ.Π.Α.</div>
+
+      <div class="row g-4 justify-content-center">
+
+        <!-- FREEMIUM -->
+        <div class="col-12 col-md-6 col-lg-3">
+          <div class="price-card h-100">
+            <div class="price-top"></div>
+            <div class="p-4">
+              <div class="price-title">FREEMIUM</div>
+              <div class="price-big">ΔΩΡΕΑΝ</div>
+              <hr>
+              <div class="price-sub"><span class="price-accent">Χωρίς</span> περιορισμό</div>
+
+              <button class="btn btn-primary rounded-pill px-4 mt-3 choose-plan"
+                      data-plan="freemium" data-planlabel="Freemium">
+                Το θέλω
+              </button>
+
+              <div class="price-foot text-danger mt-3">Για πάντα ΔΩΡΕΑΝ</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SOLO -->
+        <div class="col-12 col-md-6 col-lg-3">
+          <div class="price-card h-100">
+            <div class="price-top"></div>
+            <div class="p-4">
+              <div class="price-title">SOLO</div>
+              <div class="d-flex align-items-baseline justify-content-center gap-2">
+                <div class="price-num" data-price="solo">20€</div>
+                <div class="price-per">/ Μήνας</div>
+              </div>
+              <div class="small mt-2">Περιλαμβάνει έκπτωση -20%</div>
+              <hr>
+              <div class="price-sub"><span class="price-accent">Ένας</span> barber</div>
+
+              <button class="btn btn-primary rounded-pill px-4 mt-3 choose-plan"
+                      data-plan="solo" data-planlabel="Solo">
+                Το θέλω
+              </button>
+
+              <div class="price-foot text-danger mt-3">1 μήνα ΔΩΡΕΑΝ</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DUO -->
+        <div class="col-12 col-md-6 col-lg-3">
+          <div class="price-card h-100">
+            <div class="price-top"></div>
+            <div class="p-4">
+              <div class="price-title">DUO</div>
+              <div class="d-flex align-items-baseline justify-content-center gap-2">
+                <div class="price-num" data-price="duo">24€</div>
+                <div class="price-per">/ Μήνας</div>
+              </div>
+              <div class="small mt-2">Περιλαμβάνει έκπτωση -20%</div>
+              <hr>
+              <div class="price-sub"><span class="price-accent">Δύο</span> barbers</div>
+
+              <button class="btn btn-primary rounded-pill px-4 mt-3 choose-plan"
+                      data-plan="duo" data-planlabel="Duo">
+                Το θέλω
+              </button>
+
+              <div class="price-foot text-danger mt-3">1 μήνα ΔΩΡΕΑΝ</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TEAM -->
+        <div class="col-12 col-md-6 col-lg-3">
+          <div class="price-card h-100">
+            <div class="price-top"></div>
+            <div class="p-4">
+              <div class="price-title">TEAM</div>
+              <div class="d-flex align-items-baseline justify-content-center gap-2">
+                <div class="price-num" data-price="team">28€</div>
+                <div class="price-per">/ Μήνας</div>
+              </div>
+              <div class="small mt-2">Περιλαμβάνει έκπτωση -20%</div>
+              <hr>
+              <div class="price-sub"><span class="price-accent">Τρεις</span> και πάνω</div>
+
+              <button class="btn btn-primary rounded-pill px-4 mt-3 choose-plan"
+                      data-plan="team" data-planlabel="Team">
+                Το θέλω
+              </button>
+
+              <div class="price-foot text-danger mt-3">1 μήνα ΔΩΡΕΑΝ</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
     </div>
   </div>
 </div>
+
+<!-- MODAL: Φόρμα επικοινωνίας -->
+<div class="modal fade" id="leadModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{{ url_for('business') }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Ενδιαφέρον για <span id="planLabel"></span></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" name="plan" id="planInput">
+          <input type="hidden" name="billing" id="billingInput">
+
+          <div class="mb-3">
+            <label class="form-label">Τηλέφωνο</label>
+            <input class="form-control" name="phone" placeholder="+30..." required>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Email</label>
+            <input class="form-control" type="email" name="email" placeholder="name@example.com" required>
+          </div>
+
+          <div class="small text-muted mt-2">
+            Θα επικοινωνήσουμε μαζί σου για demo / ενεργοποίηση.
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Άκυρο</button>
+          <button class="btn btn-primary" type="submit">Αποστολή</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Τιμές όπως στις φωτο:
+  const PRICES = {
+    monthly: { freemium: "ΔΩΡΕΑΝ", solo: "20€", duo: "24€", team: "28€" },
+    annual:  { freemium: "ΔΩΡΕΑΝ", solo: "25€", duo: "30€", team: "35€" }
+  };
+
+  let billing = "monthly";
+
+  function applyPrices() {
+    document.querySelectorAll("[data-price]").forEach(el => {
+      const key = el.getAttribute("data-price");
+      el.textContent = PRICES[billing][key];
+    });
+    document.getElementById("billingInput").value = billing;
+  }
+
+  const billingSwitch = document.getElementById("billingSwitch");
+  billingSwitch.addEventListener("change", () => {
+    billing = billingSwitch.checked ? "annual" : "monthly";
+    applyPrices();
+  });
+
+  // Modal open on "Το θέλω"
+  const modalEl = document.getElementById("leadModal");
+  const modal = new bootstrap.Modal(modalEl);
+
+  document.querySelectorAll(".choose-plan").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const plan = btn.getAttribute("data-plan");
+      const label = btn.getAttribute("data-planlabel");
+
+      document.getElementById("planInput").value = plan;
+      document.getElementById("planLabel").textContent = label;
+      document.getElementById("billingInput").value = billing;
+
+      modal.show();
+    });
+  });
+
+  // init
+  applyPrices();
+</script>
+
 {% endblock %}

@@ -94,6 +94,17 @@ class Review(db.Model):
     comment = db.Column(db.String(300), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
+class BusinessLead(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    plan = db.Column(db.String(20), nullable=False)      # freemium/solo/duo/team
+    billing = db.Column(db.String(10), nullable=False)   # monthly/annual
+
+    email = db.Column(db.String(200), nullable=False)
+    phone = db.Column(db.String(60), nullable=False)
+
+
 def ensure_schema():
     """Adds missing columns on existing DBs (simple MVP migration)."""
     try:
@@ -353,6 +364,37 @@ def book_step3(sid: int):
 
 @app.route("/business")
 def business():
+    return render_template("business.html", app_name=APP_NAME)
+
+@app.route("/business", methods=["GET", "POST"])
+def business():
+    if request.method == "POST":
+        plan = (request.form.get("plan") or "").strip()
+        billing = (request.form.get("billing") or "monthly").strip()
+        email = (request.form.get("email") or "").strip().lower()
+        phone = (request.form.get("phone") or "").strip()
+
+        if plan not in ("freemium", "solo", "duo", "team"):
+            flash("Μη έγκυρο πακέτο.", "danger")
+            return redirect(url_for("business"))
+
+        if billing not in ("monthly", "annual"):
+            billing = "monthly"
+
+        if not email or not phone:
+            flash("Συμπλήρωσε email και τηλέφωνο.", "danger")
+            return redirect(url_for("business"))
+
+        if "@" not in email or "." not in email:
+            flash("Βάλε έγκυρο email.", "danger")
+            return redirect(url_for("business"))
+
+        db.session.add(BusinessLead(plan=plan, billing=billing, email=email, phone=phone))
+        db.session.commit()
+
+        flash("✅ Λάβαμε το αίτημά σου! Θα επικοινωνήσουμε σύντομα.", "success")
+        return redirect(url_for("business"))
+
     return render_template("business.html", app_name=APP_NAME)
 
 

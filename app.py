@@ -1,4 +1,7 @@
 import os
+import smtplib
+from email.message import EmailMessage
+from sqlalchemy import text
 from datetime import datetime, date
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -77,9 +80,11 @@ class Appointment(db.Model):
 
     customer_name = db.Column(db.String(140), nullable=False)
     phone = db.Column(db.String(60), nullable=False)
+    customer_email = db.Column(db.String(200), nullable=False)  # ✅ ΝΕΟ
     notes = db.Column(db.String(300), nullable=True)
-    payment_method = db.Column(db.String(40), nullable=False, default="store")  # store | online
+    payment_method = db.Column(db.String(40), nullable=False, default="store")
     status = db.Column(db.String(30), nullable=False, default="Νέο")
+
 
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -88,6 +93,17 @@ class Review(db.Model):
     rating = db.Column(db.Integer, nullable=False, default=5)
     comment = db.Column(db.String(300), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+def ensure_schema():
+    """Adds missing columns on existing DBs (simple MVP migration)."""
+    try:
+        # Postgres supports IF NOT EXISTS
+        db.session.execute(text("ALTER TABLE appointment ADD COLUMN IF NOT EXISTS customer_email VARCHAR(180);"))
+        db.session.commit()
+    except Exception:
+        # If it's sqlite or already exists etc., just ignore
+        db.session.rollback()
+
 
 def cents_to_eur(cents: int) -> str:
     return f"{cents/100:.2f}"
@@ -171,6 +187,45 @@ def seed_demo_data():
     ]
     db.session.add_all(sv); db.session.commit()
 
+def send_booking_email(to_email: str, appt: Appointment, shop: Shop, staff: Staff, service: Service):
+    host = (os.environ.get("SMTP_HOST") or "").strip()
+    user = (os.environ.get("SMTP_USER") or "").strip()
+    password = (os.environ.get("SMTP_PASS") or "").strip()
+    from_email = (os.environ.get("SMTP_FROM") or user).strip()
+    port = int(os.environ.get("SMTP_PORT") or "587")
+    use_tls = (os.environ.get("SMTP_TLS", "1").strip().lower() in ("1", "true", "yes"))
+
+    # Αν δεν έχεις ρυθμίσει SMTP στο Render, απλά δεν στέλνει (χωρίς να σπάει το booking)
+    if not host or not user or not password or not from_email:
+        return
+
+    subject = "Επιβεβαίωση κράτησης – ehairstyle"
+    body = (
+        f"Η κράτησή σου ολοκληρώθηκε!\n\n"
+        f"Κατάστημα: {shop.name}\n"
+        f"Υπηρεσία: {service.name}\n"
+        f"Υπάλληλος: {staff.name}\n"
+        f"Ημερομηνία: {appt.appt_date}\n"
+        f"Ώρα: {appt.start_hm} - {appt.end_hm}\n"
+        f"Όνομα: {appt.customer_name}\n"
+        f"Τηλέφωνο: {appt.phone}\n\n"
+        f"Σε ευχαριστούμε!"
+    )
+
+    msg = EmailMessage()
+    msg["From"] = from_email
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.set_content(body)
+
+    with smtplib.SMTP(host, port) as server:
+        if use_tls:
+            server.starttls()
+        server.login(user, password)
+        server.send_message(msg)
+
+
+
     def add_hours(staff):
         for wd in [1,2,3,4,5]:  # Tue-Sat
             db.session.add(StaffHours(staff_id=staff.id, weekday=wd, start_hm="10:00", end_hm="18:00"))
@@ -183,9 +238,10 @@ def seed_demo_data():
     ])
     db.session.commit()
 
-
 with app.app_context():
+    ensure_schema()
     seed_demo_data()
+
 
 
 @app.route("/", methods=["GET"])
@@ -330,15 +386,22 @@ def book_confirm(sid: int):
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
         phone = (request.form.get("phone") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
         notes = (request.form.get("notes") or "").strip()
         payment = (request.form.get("payment") or "store").strip()
         accept = request.form.get("accept")
 
-        if not name or not phone:
-            flash("Συμπλήρωσε όνομα και τηλέφωνο.", "danger")
+        if not name or not phone or not email:
+            flash("Συμπλήρωσε όνομα, τηλέφωνο και email.", "danger")
             return redirect(url_for("book_confirm", sid=sid))
+    
+        if "@" not in email or "." not in email:
+            flash("Βάλε έγκυρο email.", "danger")
+            return redirect(url_for("book_confirm", sid=sid))
+    
         if payment not in ("store", "online"):
             payment = "store"
+    
         if accept != "on":
             flash("Πρέπει να αποδεχτείς τους όρους.", "danger")
             return redirect(url_for("book_confirm", sid=sid))
@@ -361,8 +424,15 @@ def book_confirm(sid: int):
             notes=notes,
             payment_method=payment,
             status="Νέο",
+            customer_email=email,
+
         )
         db.session.add(appt); db.session.commit()
+        try:
+            send_booking_email(email, appt, shop, staff, service)
+        except Exception:
+            pass
+
         clear_booking()
         return redirect(url_for("booking_done", aid=appt.id))
 

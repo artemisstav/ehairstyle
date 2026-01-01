@@ -64,3 +64,54 @@ a { text-decoration: none; }
 .price-foot{
   font-weight: 700;
 }
+
+.site-footer{
+  background:#000;
+  color:#fff;
+}
+
+.site-footer .footer-title{
+  font-weight:800;
+  letter-spacing:.08em;
+  font-size:1rem;
+  margin-bottom:1rem;
+}
+
+.site-footer .footer-item{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin:14px 0;
+}
+
+.site-footer .footer-icon{
+  width:34px;
+  height:34px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:10px;
+  opacity:.95;
+}
+
+.site-footer .footer-link{
+  color:#fff;
+  text-decoration:none;
+  opacity:.9;
+}
+
+.site-footer .footer-link:hover{
+  opacity:1;
+  text-decoration:underline;
+}
+
+.site-footer .footer-text{
+  opacity:.9;
+}
+
+.site-footer .footer-bottom{
+  border-top:1px solid rgba(255,255,255,.15);
+  opacity:.85;
+  font-size:.95rem;
+}

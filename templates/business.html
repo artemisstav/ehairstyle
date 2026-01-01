@@ -29,10 +29,14 @@
               <div class="price-title">FREEMIUM</div>
               <div class="price-big">ΔΩΡΕΑΝ</div>
               <hr>
-              <div class="price-sub"><span class="price-accent">Χωρίς</span> περιορισμό</div>
+              <div class="price-sub"><span class="price-accent">Χωρίς περιορισμό</span></div>
 
-              <button class="btn btn-primary rounded-pill px-4 mt-3 choose-plan"
-                      data-plan="freemium" data-planlabel="Freemium">
+
+              <button type="button"
+                      class="btn btn-primary rounded-pill px-4 mt-3 choose want-btn"
+                      data-plan="FREEMIUM"
+                      data-bs-toggle="modal"
+                      data-bs-target="#leadModal">
                 Το θέλω
               </button>
 
@@ -53,12 +57,16 @@
               </div>
               <div class="small mt-2">Περιλαμβάνει έκπτωση -20%</div>
               <hr>
-              <div class="price-sub"><span class="price-accent">Ένας</span> barber</div>
+              <div class="price-sub"><span class="price-accent">Ένα άτομο</span> barber</div>
 
-              <button class="btn btn-primary rounded-pill px-4 mt-3 choose-plan"
-                      data-plan="solo" data-planlabel="Solo">
-                Το θέλω
-              </button>
+             <button type="button"
+                     class="btn btn-primary rounded-pill px-4 mt-3 choose want-btn"
+                     data-plan="SOLO"
+                     data-bs-toggle="modal"
+                     data-bs-target="#leadModal">
+               Το θέλω
+             </button>
+
 
               <div class="price-foot text-danger mt-3">1 μήνα ΔΩΡΕΑΝ</div>
             </div>
@@ -77,12 +85,16 @@
               </div>
               <div class="small mt-2">Περιλαμβάνει έκπτωση -20%</div>
               <hr>
-              <div class="price-sub"><span class="price-accent">Δύο</span> barbers</div>
+              <div class="price-sub"><span class="price-accent">Δύο άτομα</span> barbers</div>
 
-              <button class="btn btn-primary rounded-pill px-4 mt-3 choose-plan"
-                      data-plan="duo" data-planlabel="Duo">
+              <button type="button"
+                      class="btn btn-primary rounded-pill px-4 mt-3 choose want-btn"
+                      data-plan="DUO"
+                      data-bs-toggle="modal"
+                      data-bs-target="#leadModal">
                 Το θέλω
               </button>
+
 
               <div class="price-foot text-danger mt-3">1 μήνα ΔΩΡΕΑΝ</div>
             </div>
@@ -101,12 +113,16 @@
               </div>
               <div class="small mt-2">Περιλαμβάνει έκπτωση -20%</div>
               <hr>
-              <div class="price-sub"><span class="price-accent">Τρεις</span> και πάνω</div>
+              <div class="price-sub"><span class="price-accent">Τρία άτομα+</span> και πάνω</div>
 
-              <button class="btn btn-primary rounded-pill px-4 mt-3 choose-plan"
-                      data-plan="team" data-planlabel="Team">
+              <button type="button"
+                      class="btn btn-primary rounded-pill px-4 mt-3 choose want-btn"
+                      data-plan="TEAM"
+                      data-bs-toggle="modal"
+                      data-bs-target="#leadModal">
                 Το θέλω
               </button>
+
 
               <div class="price-foot text-danger mt-3">1 μήνα ΔΩΡΕΑΝ</div>
             </div>
@@ -157,11 +173,12 @@
   </div>
 </div>
 
+
 <script>
-  // Τιμές όπως στις φωτο:
+  // prices
   const PRICES = {
-    monthly: { freemium: "ΔΩΡΕΑΝ", solo: "20€", duo: "24€", team: "28€" },
-    annual:  { freemium: "ΔΩΡΕΑΝ", solo: "25€", duo: "30€", team: "35€" }
+    monthly: { solo: "20€", duo: "24€", team: "28€" },
+    annual:  { solo: "25€", duo: "30€", team: "35€" }
   };
 
   let billing = "monthly";
@@ -174,31 +191,25 @@
     document.getElementById("billingInput").value = billing;
   }
 
-  const billingSwitch = document.getElementById("billingSwitch");
-  billingSwitch.addEventListener("change", () => {
-    billing = billingSwitch.checked ? "annual" : "monthly";
+  document.getElementById("billingSwitch").addEventListener("change", (e) => {
+    billing = e.target.checked ? "annual" : "monthly";
     applyPrices();
   });
 
-  // Modal open on "Το θέλω"
-  const modalEl = document.getElementById("leadModal");
-  const modal = new bootstrap.Modal(modalEl);
+  // IMPORTANT: εδώ δένει το κουμπί -> modal σωστά
+  const leadModal = document.getElementById("leadModal");
+  leadModal.addEventListener("show.bs.modal", function (event) {
+    const btn = event.relatedTarget; // το κουμπί που πάτησες
+    const plan = btn?.getAttribute("data-plan") || "";
 
-  document.querySelectorAll(".choose-plan").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const plan = btn.getAttribute("data-plan");
-      const label = btn.getAttribute("data-planlabel");
-
-      document.getElementById("planInput").value = plan;
-      document.getElementById("planLabel").textContent = label;
-      document.getElementById("billingInput").value = billing;
-
-      modal.show();
-    });
+    document.getElementById("planInput").value = plan;
+    document.getElementById("planLabel").textContent = plan;
+    document.getElementById("billingInput").value = billing;
   });
 
-  // init
   applyPrices();
 </script>
+
+
 
 {% endblock %}

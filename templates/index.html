@@ -53,12 +53,22 @@
 <!-- π.χ. τα cards με shops, φίλτρα κλπ -->
 
 <script>
+document.addEventListener("DOMContentLoaded", () => {
+
   // Calendar στο "Πότε"
-  if (window.flatpickr) {
-    flatpickr("#whenInput", {
+  const whenEl = document.getElementById("whenInput");
+  if (whenEl && window.flatpickr) {
+    const fp = flatpickr(whenEl, {
+      locale: "gr",
       dateFormat: "Y-m-d",
-      minDate: "today"
+      minDate: "today",
+      disableMobile: true,
+      clickOpens: true
     });
+
+    // άνοιγμα με το πρώτο click/focus
+    whenEl.addEventListener("focus", () => fp.open());
+    whenEl.addEventListener("click", () => fp.open());
   }
 
   // "Κοντά μου"
@@ -83,6 +93,9 @@
       { enableHighAccuracy: true, timeout: 8000 }
     );
   });
+
+});
 </script>
+
 
 {% endblock %}

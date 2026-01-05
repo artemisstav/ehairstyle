@@ -30,6 +30,8 @@
         <div class="dropdown-menu p-3 hero-loc-menu">
           <input class="form-control mb-2" name="where" id="whereInput" placeholder="Διεύθυνση / Πόλη" autocomplete="off">
 
+          <div class="list-group hero-suggest" id="whereSuggest" style="display:none;"></div>
+                    
           <button type="button" class="btn btn-outline-light w-100" id="nearMeBtn">
             📍 Κοντά μου
           </button>
@@ -59,14 +61,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const whenEl = document.getElementById("whenInput");
   if (whenEl && window.flatpickr) {
     const fp = flatpickr(whenEl, {
-      locale: "gr",
+      // αν δεν δουλεύει το locale, βγάλ’ το
+      // locale: "gr",
       dateFormat: "Y-m-d",
       minDate: "today",
       disableMobile: true,
       clickOpens: true
     });
 
-    // άνοιγμα με το πρώτο click/focus
     whenEl.addEventListener("focus", () => fp.open());
     whenEl.addEventListener("click", () => fp.open());
   }
@@ -94,8 +96,63 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   });
 
+  // ✅ Β) Free Autocomplete για "Πού;"
+  const whereInput = document.getElementById("whereInput");
+  const suggestBox = document.getElementById("whereSuggest");
+  const whereBtn = document.getElementById("whereBtn");
+
+  async function fetchSuggestions(q) {
+    const res = await fetch(`/api/locations?q=${encodeURIComponent(q)}`);
+    if (!res.ok) return [];
+    return await res.json();
+  }
+
+  function renderSuggestions(items) {
+    suggestBox.innerHTML = "";
+    if (!items.length) {
+      suggestBox.style.display = "none";
+      return;
+    }
+
+    items.slice(0, 8).forEach(item => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "list-group-item list-group-item-action";
+      btn.textContent = item.label;
+
+      btn.addEventListener("click", () => {
+        whereInput.value = item.value;
+        if (whereBtn) whereBtn.textContent = item.value;
+        suggestBox.style.display = "none";
+      });
+
+      suggestBox.appendChild(btn);
+    });
+
+    suggestBox.style.display = "block";
+  }
+
+  let t = null;
+  whereInput?.addEventListener("input", () => {
+    const q = whereInput.value.trim();
+    clearTimeout(t);
+
+    if (q.length < 2) {
+      suggestBox.style.display = "none";
+      return;
+    }
+
+    t = setTimeout(async () => {
+      const items = await fetchSuggestions(q);
+      renderSuggestions(items);
+    }, 200);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!suggestBox) return;
+    if (suggestBox.contains(e.target) || e.target === whereInput) return;
+    suggestBox.style.display = "none";
+  });
+
 });
 </script>
-
-
-{% endblock %}

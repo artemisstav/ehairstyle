@@ -187,3 +187,19 @@ a { text-decoration: none; }
   border-radius:999px;
   font-weight:700;
 }
+
+.hero-suggest{
+  margin-bottom: 10px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.hero-suggest .list-group-item{
+  border: 0;
+  padding: 12px 14px;
+  font-weight: 500;
+}
+
+.hero-suggest .list-group-item:hover{
+  background: #f2f4f7;
+}

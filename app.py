@@ -253,6 +253,27 @@ with app.app_context():
     ensure_schema()
     seed_demo_data()
 
+from flask import jsonify, request
+
+LOCATIONS = [
+    "Χανιά", "Ρέθυμνο", "Ηράκλειο", "Άγιος Νικόλαος",
+    "Αθήνα", "Θεσσαλονίκη", "Πάτρα", "Λάρισα",
+    "Ιωάννινα", "Βόλος", "Καβάλα", "Ξάνθη",
+    "Χαλκίδα", "Χαλάνδρι", "Χαϊδάρι"
+]
+
+@app.get("/api/locations")
+def api_locations():
+    q = (request.args.get("q") or "").strip().lower()
+    if len(q) < 2:
+        return jsonify([])
+
+    matches = []
+    for loc in LOCATIONS:
+        if q in loc.lower():
+            matches.append({"label": f"{loc} Ελλάδα", "value": loc})
+
+    return jsonify(matches[:10])
 
 
 @app.route("/", methods=["GET"])

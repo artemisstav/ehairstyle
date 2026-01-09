@@ -189,17 +189,20 @@ a { text-decoration: none; }
 }
 
 .hero-suggest{
-  margin-bottom: 10px;
+  margin-top: 8px;
+  max-height: 220px;
+  overflow: auto;
   border-radius: 12px;
-  overflow: hidden;
 }
 
 .hero-suggest .list-group-item{
+  cursor: pointer;
   border: 0;
-  padding: 12px 14px;
-  font-weight: 500;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(20,20,20,0.95);
+  color: #fff;
 }
 
 .hero-suggest .list-group-item:hover{
-  background: #f2f4f7;
+  background: rgba(255,255,255,0.08);
 }

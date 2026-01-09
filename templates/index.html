@@ -27,12 +27,13 @@
         <button class="btn hero-loc-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="whereBtn">
           Πού;
         </button>
+
         <div class="dropdown-menu p-3 hero-loc-menu">
           <input class="form-control mb-2" name="where" id="whereInput" placeholder="Διεύθυνση / Πόλη" autocomplete="off">
 
           <div class="list-group hero-suggest" id="whereSuggest" style="display:none;"></div>
-                    
-          <button type="button" class="btn btn-outline-light w-100" id="nearMeBtn">
+
+          <button type="button" class="btn btn-outline-light w-100 mt-2" id="nearMeBtn">
             📍 Κοντά μου
           </button>
 
@@ -51,9 +52,6 @@
   </div>
 </div>
 
-<!-- Εδώ κάτω αφήνεις όπως έχεις τα results/listing -->
-<!-- π.χ. τα cards με shops, φίλτρα κλπ -->
-
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -61,12 +59,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const whenEl = document.getElementById("whenInput");
   if (whenEl && window.flatpickr) {
     const fp = flatpickr(whenEl, {
-      // αν δεν δουλεύει το locale, βγάλ’ το
-      // locale: "gr",
+      locale: flatpickr.l10ns.gr,
       dateFormat: "Y-m-d",
       minDate: "today",
-      disableMobile: true,
-      clickOpens: true
+      disableMobile: true
     });
 
     whenEl.addEventListener("focus", () => fp.open());
@@ -96,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   });
 
-  // ✅ Β) Free Autocomplete για "Πού;"
+  // Free Autocomplete για "Πού;"
   const whereInput = document.getElementById("whereInput");
   const suggestBox = document.getElementById("whereSuggest");
   const whereBtn = document.getElementById("whereBtn");
@@ -156,3 +152,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 </script>
+
+{% endblock %}

@@ -302,26 +302,42 @@ def api_locations():
 @app.route("/", methods=["GET"])
 def home():
     q = (request.args.get("q") or "").strip()
-    city = (request.args.get("city") or "").strip()
-    where = (request.args.get("where") or "").strip()
-    category = (request.args.get("cat") or "").strip()
 
-# αν έρχεται where από hero-search, το χρησιμοποιούμε σαν city
-    if not city and where:
-        city = where
+    # Hero form uses name="where". Keep backward compatibility with old name="city".
+    city = (request.args.get("where") or request.args.get("city") or "").strip()
+    category = (request.args.get("cat") or "").strip()  # "", "Hair", "Barber"
 
     query = Shop.query
     if q:
         query = query.filter(Shop.name.ilike(f"%{q}%"))
     if city:
         query = query.filter(Shop.city == city)
-    if category:
+
+    # Category filter:
+    # - If user selects "Hair" -> show shops category in ("Hair", "Both")
+    # - If user selects "Barber" -> show shops category in ("Barber", "Both")
+    if category == "Hair":
+        query = query.filter(Shop.category.in_(["Hair", "Both"]))
+    elif category == "Barber":
+        query = query.filter(Shop.category.in_(["Barber", "Both"]))
+    elif category:
+        # fallback if something unexpected is sent
         query = query.filter(Shop.category == category)
 
     shops = query.order_by(Shop.is_open.desc(), Shop.name.asc()).all()
     cities = [r[0] for r in db.session.query(Shop.city).distinct().order_by(Shop.city).all()]
     cats = [r[0] for r in db.session.query(Shop.category).distinct().order_by(Shop.category).all()]
-    return render_template("index.html", app_name=APP_NAME, shops=shops, cities=cities, cats=cats, q=q, city=city, category=category)
+
+    return render_template(
+        "index.html",
+        app_name=APP_NAME,
+        shops=shops,
+        cities=cities,
+        cats=cats,
+        q=q,
+        city=city,
+        category=category
+    )
 
 @app.route("/shops/<int:sid>", methods=["GET"])
 def shop_detail(sid: int):
@@ -561,27 +577,91 @@ def admin_logout():
 def admin_dashboard():
     if not admin_required():
         return redirect(url_for("admin_login"))
+
     shops = Shop.query.order_by(Shop.name.asc()).all()
+
+    # Selected shop (from querystring ?shop_id=)
+    selected_shop = None
+    selected_shop_id = None
+    raw = (request.args.get("shop_id") or "").strip()
+
+    if raw:
+        try:
+            selected_shop_id = int(raw)
+            selected_shop = Shop.query.get(selected_shop_id)
+        except Exception:
+            selected_shop_id = None
+            selected_shop = None
+
+    # default: first shop
+    if selected_shop is None and shops:
+        selected_shop = shops[0]
+        selected_shop_id = selected_shop.id
+
+    staff = []
+    services = []
+    if selected_shop_id:
+        staff = Staff.query.filter_by(shop_id=selected_shop_id, is_active=True).order_by(Staff.name.asc()).all()
+        services = Service.query.filter_by(shop_id=selected_shop_id, is_active=True).order_by(Service.name.asc()).all()
+
     appts = Appointment.query.order_by(Appointment.appt_date.desc(), Appointment.start_hm.desc()).limit(100).all()
-    return render_template("admin.html", app_name=APP_NAME, shops=shops, appts=appts)
+
+    return render_template(
+        "admin.html",
+        app_name=APP_NAME,
+        shops=shops,
+        selected_shop=selected_shop,
+        selected_shop_id=selected_shop_id,
+        staff=staff,
+        services=services,
+        appts=appts
+    )
 
 @app.route("/admin/shops/new", methods=["POST"])
 def admin_shop_new():
     if not admin_required():
         return redirect(url_for("admin_login"))
+
     name = (request.form.get("name") or "").strip()
     city = (request.form.get("city") or "").strip() or "Χανιά"
     area = (request.form.get("area") or "").strip()
-    category = (request.form.get("category") or "").strip() or "Hair"
+    category = (request.form.get("category") or "Hair").strip() or "Hair"
     address = (request.form.get("address") or "").strip()
     phone = (request.form.get("phone") or "").strip()
     description = (request.form.get("description") or "").strip()
+
+    if category not in ("Hair", "Barber", "Both"):
+        category = "Hair"
+
     if not name:
-        flash("Όνομα απαιτείται.", "danger"); return redirect(url_for("admin_dashboard"))
-    s = Shop(name=name, city=city, area=area, category=category, address=address, phone=phone, description=description, is_open=True)
-    db.session.add(s); db.session.commit()
+        flash("Όνομα απαιτείται.", "danger")
+        return redirect(url_for("admin_dashboard"))
+
+    s = Shop(
+        name=name, city=city, area=area, category=category,
+        address=address, phone=phone, description=description, is_open=True
+    )
+    db.session.add(s)
+    db.session.commit()
+
     flash("✅ Προστέθηκε κατάστημα.", "success")
-    return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("admin_dashboard", shop_id=s.id))
+
+@app.route("/admin/shops/<int:sid>/update", methods=["POST"])
+def admin_shop_update(sid: int):
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+
+    shop = Shop.query.get_or_404(sid)
+    category = (request.form.get("category") or shop.category or "Hair").strip()
+    if category not in ("Hair", "Barber", "Both"):
+        category = "Hair"
+
+    shop.category = category
+    db.session.commit()
+    flash("✅ Ενημερώθηκε η κατηγορία.", "success")
+    return redirect(url_for("admin_dashboard", shop_id=sid))
+
 
 @app.route("/admin/staff/new", methods=["POST"])
 def admin_staff_new():
@@ -598,7 +678,8 @@ def admin_staff_new():
         db.session.add(StaffHours(staff_id=st.id, weekday=wd, start_hm="10:00", end_hm="18:00"))
     db.session.commit()
     flash("✅ Προστέθηκε υπάλληλος.", "success")
-    return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("admin_dashboard", shop_id=shop_id))
+
 
 @app.route("/admin/service/new", methods=["POST"])
 def admin_service_new():
@@ -617,7 +698,8 @@ def admin_service_new():
     sv = Service(shop_id=shop_id, name=name, duration_min=max(5, duration), price_cents=max(0, price_cents), is_active=True)
     db.session.add(sv); db.session.commit()
     flash("✅ Προστέθηκε υπηρεσία.", "success")
-    return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("admin_dashboard", shop_id=shop_id))
+
 
 @app.route("/admin/hours/<int:staff_id>", methods=["GET", "POST"])
 def admin_hours(staff_id: int):

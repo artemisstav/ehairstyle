@@ -206,3 +206,34 @@ a { text-decoration: none; }
 .hero-suggest .list-group-item:hover{
   background: rgba(255,255,255,0.08);
 }
+
+
+/* Ensure calendar is above hero overlay */
+.flatpickr-calendar{
+  z-index: 99999 !important;
+}
+
+/* Flatpickr να μη κρύβεται πίσω από hero/overlay */
+.flatpickr-calendar {
+  z-index: 99999 !important;
+}
+
+/* Suggest list στο dropdown */
+.hero-suggest{
+  margin-top: 8px;
+  max-height: 220px;
+  overflow: auto;
+  border-radius: 12px;
+}
+
+.hero-suggest .list-group-item{
+  cursor: pointer;
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(20,20,20,0.95);
+  color: #fff;
+}
+
+.hero-suggest .list-group-item:hover{
+  background: rgba(255,255,255,0.08);
+}

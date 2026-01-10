@@ -3,6 +3,7 @@ import smtplib
 from email.message import EmailMessage
 from sqlalchemy import text
 from datetime import datetime, date
+import unicodedata
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 
@@ -112,8 +113,11 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE appointment ADD COLUMN IF NOT EXISTS customer_email VARCHAR(180);"))
         db.session.commit()
     except Exception:
-        # If it's sqlite or already exists etc., just ignore
-        db.session.rollback()
+        # If it's sqlite, table missing, DB temporarily unavailable, etc.
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
 
 
 def cents_to_eur(cents: int) -> str:
@@ -162,31 +166,29 @@ def available_slots(staff_id: int, iso_date: str, duration_min: int, step_min: i
     return slots
 
 def seed_demo_data():
-    """Create tables and insert demo data once.
-
-    NOTE: When deployed with gunicorn, the `__main__` block does NOT run.
-    So we initialize the DB during app startup to avoid "no such table".
-    """
+    """Create tables and insert demo data once."""
     db.create_all()
 
-    # (προαιρετικό) αν θες κάποτε να το κλείσεις:
-    if (os.environ.get("SEED_DEMO_DATA", "1") or "1").strip() not in ("1","true","TRUE","yes","YES"):
+    if (os.environ.get("SEED_DEMO_DATA", "1") or "1").strip() not in ("1", "true", "TRUE", "yes", "YES"):
         return
 
     if Shop.query.count() > 0:
         return
+
     s1 = Shop(name="EHair Studio Chania", city="Χανιά", area="Κέντρο", category="Hair",
               address="Χανιά", phone="0000000000",
               description="Κλείσε ραντεβού online σε λίγα βήματα. Demo κατάστημα.")
     s2 = Shop(name="Barber Craft", city="Χανιά", area="Νέα Χώρα", category="Barber",
               address="Χανιά", phone="0000000000",
               description="Κουρέματα & περιποίηση γενειάδας. Demo κατάστημα.")
-    db.session.add_all([s1, s2]); db.session.commit()
+    db.session.add_all([s1, s2])
+    db.session.commit()
 
     st1 = Staff(shop_id=s1.id, name="Μαρία", title="Hair Stylist")
     st2 = Staff(shop_id=s1.id, name="Γιάννης", title="Hair Stylist")
     st3 = Staff(shop_id=s2.id, name="Νίκος", title="Barber")
-    db.session.add_all([st1, st2, st3]); db.session.commit()
+    db.session.add_all([st1, st2, st3])
+    db.session.commit()
 
     sv = [
         Service(shop_id=s1.id, name="Γυναικείο κούρεμα", duration_min=45, price_cents=2500),
@@ -196,7 +198,27 @@ def seed_demo_data():
         Service(shop_id=s2.id, name="Κούρεμα + Γένια", duration_min=45, price_cents=1700),
         Service(shop_id=s2.id, name="Περιποίηση γενειάδας", duration_min=15, price_cents=600),
     ]
-    db.session.add_all(sv); db.session.commit()
+    db.session.add_all(sv)
+    db.session.commit()
+
+    # ✅ ΩΡΑΡΙΟ (αυτό πριν ήταν κατά λάθος μέσα στο send_booking_email)
+    def add_hours(staff):
+        for wd in [1, 2, 3, 4, 5]:  # Tue-Sat
+            db.session.add(StaffHours(staff_id=staff.id, weekday=wd, start_hm="10:00", end_hm="18:00"))
+
+    add_hours(st1)
+    add_hours(st2)
+    add_hours(st3)
+    db.session.commit()
+
+    # ✅ REVIEWS (και αυτό πριν ήταν μέσα στο send_booking_email)
+    db.session.add_all([
+        Review(shop_id=s1.id, customer_name="Αλέξης", rating=5, comment="Τέλειο αποτέλεσμα!"),
+        Review(shop_id=s2.id, customer_name="Κώστας", rating=5, comment="Γρήγορο και προσεγμένο κούρεμα.")
+    ])
+    db.session.commit()
+
+
 
 def send_booking_email(to_email: str, appt: Appointment, shop: Shop, staff: Staff, service: Service):
     host = (os.environ.get("SMTP_HOST") or "").strip()
@@ -237,23 +259,12 @@ def send_booking_email(to_email: str, appt: Appointment, shop: Shop, staff: Staf
 
 
 
-    def add_hours(staff):
-        for wd in [1,2,3,4,5]:  # Tue-Sat
-            db.session.add(StaffHours(staff_id=staff.id, weekday=wd, start_hm="10:00", end_hm="18:00"))
-    add_hours(st1); add_hours(st2); add_hours(st3)
-    db.session.commit()
-
-    db.session.add_all([
-        Review(shop_id=s1.id, customer_name="Αλέξης", rating=5, comment="Τέλειο αποτέλεσμα!"),
-        Review(shop_id=s2.id, customer_name="Κώστας", rating=5, comment="Γρήγορο και προσεγμένο κούρεμα.")
-    ])
-    db.session.commit()
 
 with app.app_context():
     ensure_schema()
     seed_demo_data()
 
-from flask import jsonify, request
+from flask import jsonify
 
 LOCATIONS = [
     "Χανιά", "Ρέθυμνο", "Ηράκλειο", "Άγιος Νικόλαος",
@@ -262,25 +273,42 @@ LOCATIONS = [
     "Χαλκίδα", "Χαλάνδρι", "Χαϊδάρι"
 ]
 
+def _normalize_gr(s: str) -> str:
+    # απλό “χωρίς τόνους”
+    table = str.maketrans({
+        "ά":"α","έ":"ε","ή":"η","ί":"ι","ό":"ο","ύ":"υ","ώ":"ω",
+        "Ά":"α","Έ":"ε","Ή":"η","Ί":"ι","Ό":"ο","Ύ":"υ","Ώ":"ω",
+        "ϊ":"ι","ΐ":"ι","ϋ":"υ","ΰ":"υ"
+    })
+    return (s or "").translate(table).lower()
+
 @app.get("/api/locations")
 def api_locations():
-    q = (request.args.get("q") or "").strip().lower()
+    q = (request.args.get("q") or "").strip()
     if len(q) < 2:
         return jsonify([])
 
+    nq = _normalize_gr(q)
+
     matches = []
     for loc in LOCATIONS:
-        if q in loc.lower():
+        if nq in _normalize_gr(loc):
             matches.append({"label": f"{loc} Ελλάδα", "value": loc})
 
     return jsonify(matches[:10])
+
 
 
 @app.route("/", methods=["GET"])
 def home():
     q = (request.args.get("q") or "").strip()
     city = (request.args.get("city") or "").strip()
+    where = (request.args.get("where") or "").strip()
     category = (request.args.get("cat") or "").strip()
+
+# αν έρχεται where από hero-search, το χρησιμοποιούμε σαν city
+    if not city and where:
+        city = where
 
     query = Shop.query
     if q:

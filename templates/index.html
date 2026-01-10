@@ -44,6 +44,25 @@
         </div>
       </div>
 
+      <div class="hero-divider"></div>
+
+      <!-- Τι -->
+      <div class="dropdown hero-cat">
+        <button class="btn hero-loc-btn dropdown-toggle" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false" id="whatBtn">
+          Τι;
+        </button>
+
+        <div class="dropdown-menu p-2 hero-cat-menu">
+          <button type="button" class="dropdown-item" data-value="">Όλα</button>
+          <button type="button" class="dropdown-item" data-value="Barber">Barber</button>
+          <button type="button" class="dropdown-item" data-value="Hair">Hairdresser</button>
+        </div>
+
+        <!-- αυτό θα σταλεί στο backend -->
+        <input type="hidden" name="cat" id="catInput" value="{{ category or '' }}">
+      </div>
+
       <!-- Αναζήτηση -->
       <button class="btn btn-primary hero-search-btn px-4" type="submit">
         🔍 ΑΝΑΖΗΤΗΣΗ
@@ -59,12 +78,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const whenEl = document.getElementById("whenInput");
   if (whenEl && window.flatpickr) {
     const fp = flatpickr(whenEl, {
-      locale: flatpickr.l10ns.gr,
       dateFormat: "Y-m-d",
       minDate: "today",
-      disableMobile: true
+      disableMobile: true,
+      clickOpens: true
     });
-
     whenEl.addEventListener("focus", () => fp.open());
     whenEl.addEventListener("click", () => fp.open());
   }
@@ -92,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   });
 
-  // Free Autocomplete για "Πού;"
+  // ✅ Free Autocomplete για "Πού;"
   const whereInput = document.getElementById("whereInput");
   const suggestBox = document.getElementById("whereSuggest");
   const whereBtn = document.getElementById("whereBtn");
@@ -103,12 +121,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return await res.json();
   }
 
-  function renderSuggestions(items) {
+    function renderSuggestions(items) {
+    if (!suggestBox) return;
     suggestBox.innerHTML = "";
     if (!items.length) {
       suggestBox.style.display = "none";
       return;
     }
+
 
     items.slice(0, 8).forEach(item => {
       const btn = document.createElement("button");
@@ -149,6 +169,29 @@ document.addEventListener("DOMContentLoaded", () => {
     if (suggestBox.contains(e.target) || e.target === whereInput) return;
     suggestBox.style.display = "none";
   });
+
+    // ✅ "Τι;" dropdown -> γεμίζει hidden input (cat)
+  const catInput = document.getElementById("catInput");
+  const whatBtn = document.getElementById("whatBtn");
+
+  // αν υπάρχει ήδη value (π.χ. από querystring), γράψ’ το στο κουμπί
+  if (catInput && whatBtn && catInput.value) {
+    whatBtn.textContent = (catInput.value === "Hair") ? "Hairdresser" : catInput.value;
+  }
+
+  document.querySelectorAll(".hero-cat-menu .dropdown-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      const val = item.getAttribute("data-value") || "";
+      if (catInput) catInput.value = val;
+
+      if (whatBtn) {
+        if (!val) whatBtn.textContent = "Τι;";
+        else if (val === "Hair") whatBtn.textContent = "Hairdresser";
+        else whatBtn.textContent = val; // Barber
+      }
+    });
+  });
+
 
 });
 </script>

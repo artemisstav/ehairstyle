@@ -96,6 +96,62 @@
         </form>
       </div>
     </div>
+    
+    
+<div class="card shadow-sm mt-4">
+  <div class="card-header fw-bold">🏪 Υπάρχοντα καταστήματα</div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Όνομα</th>
+            <th>Πόλη</th>
+            <th>Κατηγορία</th>
+            <th>Κατάσταση</th>
+            <th class="text-end">Ενέργειες</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in shops %}
+          <tr>
+            <td class="fw-semibold">{{ s.name }}</td>
+            <td>{{ s.city }}</td>
+            <td>{{ s.category }}</td>
+            <td>
+              {% if s.is_open %}
+                <span class="badge bg-success">Ανοιχτό</span>
+              {% else %}
+                <span class="badge bg-secondary">Κλειστό</span>
+              {% endif %}
+            </td>
+            <td class="text-end d-flex justify-content-end gap-2">
+              <a class="btn btn-sm btn-outline-primary"
+                 href="{{ url_for('admin_dashboard', shop_id=s.id) }}">
+                 Επιλογή
+              </a>
+
+              <form method="post" action="{{ url_for('admin_toggle_shop', sid=s.id) }}">
+                <button class="btn btn-sm btn-outline-dark" type="submit">
+                  {% if s.is_open %}Κλείσιμο{% else %}Άνοιγμα{% endif %}
+                </button>
+              </form>
+
+              <form method="post" action="{{ url_for('admin_delete_shop', sid=s.id) }}"
+                    onsubmit="return confirm('Να διαγραφεί το κατάστημα; (Θα σβηστούν και υπάλληλοι/υπηρεσίες)');">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Διαγραφή</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="text-muted small">Tip: Πάτα “Επιλογή” για να φορτώσεις υπαλλήλους/υπηρεσίες αυτού του καταστήματος.</div>
+  </div>
+</div>
+
+
 
     {% if selected_shop %}
       <!-- Add staff (bound to selected shop) -->

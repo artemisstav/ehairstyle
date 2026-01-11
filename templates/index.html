@@ -8,6 +8,49 @@
       <h1 class="hero-title">Κλείσε το ραντεβού σου online</h1>
     </div>
 
+  <div class="mt-4">
+  <h3 class="mb-3">Διαθέσιμα καταστήματα</h3>
+
+  {% if shops %}
+    <div class="row g-3">
+      {% for s in shops %}
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="fw-bold">{{ s.name }}</div>
+                  <div class="text-muted">{{ s.city }}{% if s.area %} • {{ s.area }}{% endif %}</div>
+                </div>
+                <span class="badge bg-dark">{{ s.category }}</span>
+              </div>
+
+              {% if s.description %}
+                <div class="mt-2 small text-muted">{{ s.description }}</div>
+              {% endif %}
+
+              <div class="mt-3 d-flex justify-content-between align-items-center">
+                {% if s.is_open %}
+                  <span class="badge bg-success">Ανοιχτό</span>
+                {% else %}
+                  <span class="badge bg-secondary">Κλειστό</span>
+                {% endif %}
+
+                <a class="btn btn-sm btn-primary" href="{{ url_for('shop_detail', sid=s.id) }}">
+                  Δες & Κλείσε
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info">Δεν βρέθηκαν καταστήματα.</div>
+  {% endif %}
+</div>
+
+
     <form method="get" action="{{ url_for('home') }}" class="hero-search" id="heroSearchForm">
 
       <!-- Πότε -->

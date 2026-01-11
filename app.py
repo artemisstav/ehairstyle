@@ -578,43 +578,33 @@ def admin_dashboard():
     if not admin_required():
         return redirect(url_for("admin_login"))
 
+    # Όλα τα καταστήματα για dropdown + λίστα
     shops = Shop.query.order_by(Shop.name.asc()).all()
 
-    # Selected shop (from querystring ?shop_id=)
-    selected_shop = None
-    selected_shop_id = None
-    raw = (request.args.get("shop_id") or "").strip()
+    # Ραντεβού
+    appts = Appointment.query.order_by(
+        Appointment.appt_date.desc(),
+        Appointment.start_hm.desc()
+    ).limit(100).all()
 
-    if raw:
-        try:
-            selected_shop_id = int(raw)
-            selected_shop = Shop.query.get(selected_shop_id)
-        except Exception:
-            selected_shop_id = None
-            selected_shop = None
+    # ποιο shop είναι “επιλεγμένο” στο admin (με querystring)
+    selected_shop_id = request.args.get("shop_id", type=int)
+    if not selected_shop_id and shops:
+        selected_shop_id = shops[0].id
 
-    # default: first shop
-    if selected_shop is None and shops:
-        selected_shop = shops[0]
-        selected_shop_id = selected_shop.id
-
-    staff = []
-    services = []
-    if selected_shop_id:
-        staff = Staff.query.filter_by(shop_id=selected_shop_id, is_active=True).order_by(Staff.name.asc()).all()
-        services = Service.query.filter_by(shop_id=selected_shop_id, is_active=True).order_by(Service.name.asc()).all()
-
-    appts = Appointment.query.order_by(Appointment.appt_date.desc(), Appointment.start_hm.desc()).limit(100).all()
+    # staff/services μόνο του επιλεγμένου shop (για να τα δείχνεις στην ίδια σελίδα)
+    staff = Staff.query.filter_by(shop_id=selected_shop_id, is_active=True).order_by(Staff.name.asc()).all() if selected_shop_id else []
+    services = Service.query.filter_by(shop_id=selected_shop_id, is_active=True).order_by(Service.name.asc()).all() if selected_shop_id else []
 
     return render_template(
         "admin.html",
         app_name=APP_NAME,
         shops=shops,
-        selected_shop=selected_shop,
+        appts=appts,
         selected_shop_id=selected_shop_id,
         staff=staff,
         services=services,
-        appts=appts
+        cents_to_eur=cents_to_eur
     )
 
 @app.route("/admin/shops/new", methods=["POST"])
@@ -700,6 +690,41 @@ def admin_service_new():
     flash("✅ Προστέθηκε υπηρεσία.", "success")
     return redirect(url_for("admin_dashboard", shop_id=shop_id))
 
+@app.route("/admin/shops/<int:sid>/toggle", methods=["POST"])
+def admin_toggle_shop(sid: int):
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+    shop = Shop.query.get_or_404(sid)
+    shop.is_open = not shop.is_open
+    db.session.commit()
+    flash("✅ Ενημερώθηκε η κατάσταση του καταστήματος.", "success")
+    return redirect(url_for("admin_dashboard", shop_id=sid))
+
+
+@app.route("/admin/shops/<int:sid>/delete", methods=["POST"])
+def admin_delete_shop(sid: int):
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+
+    shop = Shop.query.get_or_404(sid)
+
+    # Σβήνουμε πρώτα εξαρτήσεις
+    StaffHours.query.filter(
+        StaffHours.staff_id.in_(
+            db.session.query(Staff.id).filter(Staff.shop_id == sid)
+        )
+    ).delete(synchronize_session=False)
+
+    Appointment.query.filter_by(shop_id=sid).delete(synchronize_session=False)
+    Review.query.filter_by(shop_id=sid).delete(synchronize_session=False)
+    Service.query.filter_by(shop_id=sid).delete(synchronize_session=False)
+    Staff.query.filter_by(shop_id=sid).delete(synchronize_session=False)
+
+    db.session.delete(shop)
+    db.session.commit()
+
+    flash("🗑️ Διαγράφηκε το κατάστημα.", "warning")
+    return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/hours/<int:staff_id>", methods=["GET", "POST"])
 def admin_hours(staff_id: int):

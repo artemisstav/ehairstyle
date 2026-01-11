@@ -151,7 +151,123 @@
   </div>
 </div>
 
+<div class="card shadow-sm mt-4" id="edit">
+  <div class="card-header fw-bold">✏️ Επεξεργασία καταστήματος</div>
+  <div class="card-body">
 
+    {% if selected_shop %}
+      <div class="mb-3">
+        <div class="fw-semibold">{{ selected_shop.name }}</div>
+        <div class="text-muted small">{{ selected_shop.city }}{% if selected_shop.area %} • {{ selected_shop.area }}{% endif %}</div>
+      </div>
+
+      <div class="row g-3">
+
+        <!-- Νέος υπάλληλος -->
+        <div class="col-12 col-lg-6">
+          <div class="border rounded p-3">
+            <div class="fw-bold mb-2">➕ Νέος υπάλληλος</div>
+
+            <form method="post" action="{{ url_for('admin_staff_new') }}">
+              <input type="hidden" name="shop_id" value="{{ selected_shop.id }}">
+
+              <div class="row g-2">
+                <div class="col-12">
+                  <input class="form-control" name="name" placeholder="Όνομα υπαλλήλου" required>
+                </div>
+                <div class="col-12">
+                  <input class="form-control" name="title" placeholder="Τίτλος (π.χ. Barber)">
+                </div>
+              </div>
+
+              <button class="btn btn-success w-100 mt-3" type="submit">Προσθήκη</button>
+            </form>
+
+            {% if staff %}
+              <div class="mt-3 small text-muted">Υπάρχοντες:</div>
+              <ul class="small mb-0">
+                {% for st in staff %}
+                  <li>{{ st.name }}{% if st.title %} — {{ st.title }}{% endif %}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Νέα υπηρεσία -->
+        <div class="col-12 col-lg-6">
+          <div class="border rounded p-3">
+            <div class="fw-bold mb-2">➕ Νέα υπηρεσία (30’)</div>
+
+            <form method="post" action="{{ url_for('admin_service_new') }}">
+              <input type="hidden" name="shop_id" value="{{ selected_shop.id }}">
+
+              <div class="row g-2">
+                <div class="col-12">
+                  <input class="form-control" name="name" placeholder="Όνομα υπηρεσίας" required>
+                </div>
+                <div class="col-12">
+                  <input class="form-control" name="price" placeholder="Τιμή (π.χ. 15)" value="0">
+                </div>
+              </div>
+
+              <button class="btn btn-primary w-100 mt-3" type="submit">Προσθήκη</button>
+            </form>
+
+            {% if services %}
+              <div class="mt-3 small text-muted">Υπάρχουσες:</div>
+              <ul class="small mb-0">
+                {% for sv in services %}
+                  <li>{{ sv.name }} — {{ cents_to_eur(sv.price_cents) }}€</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Ωράριο καταστήματος -->
+        <div class="col-12">
+          <div class="border rounded p-3">
+            <div class="fw-bold mb-2">🕒 Ωράριο καταστήματος (μισάωρα)</div>
+
+            <form method="post" action="{{ url_for('admin_shop_hours_save', sid=selected_shop.id) }}">
+              {% set days = ["Δευ", "Τρι", "Τετ", "Πεμ", "Παρ", "Σαβ", "Κυρ"] %}
+
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-2">
+                  <thead>
+                    <tr>
+                      <th>Ημέρα</th>
+                      <th>Από</th>
+                      <th>Έως</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for wd in range(7) %}
+                      {% set row = (hours | selectattr("weekday", "equalto", wd) | list) %}
+                      {% set h = row[0] if row else None %}
+                      <tr>
+                        <td class="fw-semibold">{{ days[wd] }}</td>
+                        <td><input class="form-control form-control-sm" name="start_{{ wd }}" value="{{ h.start_hm if h else '' }}" placeholder="10:00"></td>
+                        <td><input class="form-control form-control-sm" name="end_{{ wd }}" value="{{ h.end_hm if h else '' }}" placeholder="18:00"></td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="small text-muted mb-2">Αν αφήσεις κενό μια μέρα → θεωρείται κλειστό.</div>
+              <button class="btn btn-outline-dark w-100" type="submit">Αποθήκευση ωραρίου</button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    {% else %}
+      <div class="alert alert-warning">Δεν υπάρχει επιλεγμένο κατάστημα.</div>
+    {% endif %}
+  </div>
+</div>
 
     {% if selected_shop %}
       <!-- Add staff (bound to selected shop) -->

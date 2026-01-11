@@ -45,6 +45,12 @@ class Shop(db.Model):
     phone = db.Column(db.String(50), nullable=True)
     description = db.Column(db.String(800), nullable=True)
     is_open = db.Column(db.Boolean, nullable=False, default=True)
+class ShopHours(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    shop_id = db.Column(db.Integer, db.ForeignKey("shop.id"), nullable=False)
+    weekday = db.Column(db.Integer, nullable=False)  # 0 Mon .. 6 Sun
+    start_hm = db.Column(db.String(5), nullable=False, default="10:00")
+    end_hm = db.Column(db.String(5), nullable=False, default="18:00")
 
 class Staff(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -142,81 +148,137 @@ def get_booking_state():
 def clear_booking():
     session.pop("booking", None)
 
-def available_slots(staff_id: int, iso_date: str, duration_min: int, step_min: int = 15):
+def available_slots(staff_id: int, iso_date: str, duration_min: int, step_min: int = 30):
+    # ✅ Κάθε υπηρεσία = 30 λεπτά (σταθερά)
+    duration_min = 30
+    step_min = 30
+
+    staff = Staff.query.get(staff_id)
+    if not staff:
+        return []
+
     wd = weekday_of(iso_date)
-    hours = StaffHours.query.filter_by(staff_id=staff_id, weekday=wd).first()
+
+    # ✅ Ωράριο από το κατάστημα (ShopHours)
+    hours = ShopHours.query.filter_by(shop_id=staff.shop_id, weekday=wd).first()
     if not hours:
         return []
+
     start = hm_to_minutes(hours.start_hm)
     end = hm_to_minutes(hours.end_hm)
     if end <= start:
         return []
 
-    appts = Appointment.query.filter_by(staff_id=staff_id, appt_date=iso_date).filter(Appointment.status != "Ακυρωμένο").all()
+    appts = (
+        Appointment.query
+        .filter_by(staff_id=staff_id, appt_date=iso_date)
+        .filter(Appointment.status != "Ακυρωμένο")
+        .all()
+    )
     busy = [(hm_to_minutes(a.start_hm), hm_to_minutes(a.end_hm)) for a in appts]
 
     slots = []
     t = start
     last_start = end - duration_min
+
     while t <= last_start:
         cand = (t, t + duration_min)
         if all(cand[1] <= b[0] or cand[0] >= b[1] for b in busy):
             slots.append(minutes_to_hm(t))
         t += step_min
+
     return slots
 
+
 def seed_demo_data():
-    """Create tables and insert demo data once."""
+    """Create tables and insert demo data once.
+
+    NOTE: When deployed with gunicorn, the `__main__` block does NOT run.
+    So we initialize the DB during app startup to avoid "no such table".
+    """
     db.create_all()
 
-    if (os.environ.get("SEED_DEMO_DATA", "1") or "1").strip() not in ("1", "true", "TRUE", "yes", "YES"):
+    # (προαιρετικό) αν θες κάποτε να το κλείσεις:
+    if (os.environ.get("SEED_DEMO_DATA", "1") or "1").strip().lower() not in ("1", "true", "yes"):
         return
 
+    # Αν έχει ήδη δεδομένα, δεν ξανασπέρνει
     if Shop.query.count() > 0:
         return
 
-    s1 = Shop(name="EHair Studio Chania", city="Χανιά", area="Κέντρο", category="Hair",
-              address="Χανιά", phone="0000000000",
-              description="Κλείσε ραντεβού online σε λίγα βήματα. Demo κατάστημα.")
-    s2 = Shop(name="Barber Craft", city="Χανιά", area="Νέα Χώρα", category="Barber",
-              address="Χανιά", phone="0000000000",
-              description="Κουρέματα & περιποίηση γενειάδας. Demo κατάστημα.")
+    # Καταστήματα
+    s1 = Shop(
+        name="EHair Studio Chania",
+        city="Χανιά",
+        area="Κέντρο",
+        category="Hair",
+        address="Χανιά",
+        phone="0000000000",
+        description="Κλείσε ραντεβού online σε λίγα βήματα. Demo κατάστημα."
+    )
+    s2 = Shop(
+        name="Barber Craft",
+        city="Χανιά",
+        area="Νέα Χώρα",
+        category="Barber",
+        address="Χανιά",
+        phone="0000000000",
+        description="Κουρέματα & περιποίηση γενειάδας. Demo κατάστημα."
+    )
+
     db.session.add_all([s1, s2])
     db.session.commit()
 
+    # ✅ ΩΡΑΡΙΟ ΚΑΤΑΣΤΗΜΑΤΟΣ: Δευ-Σαβ 10:00-18:00
+    def add_shop_hours(shop_id: int):
+        for wd in [0, 1, 2, 3, 4, 5]:
+            db.session.add(
+                ShopHours(shop_id=shop_id, weekday=wd, start_hm="10:00", end_hm="18:00")
+            )
+
+    add_shop_hours(s1.id)
+    add_shop_hours(s2.id)
+    db.session.commit()
+
+    # Υπάλληλοι
     st1 = Staff(shop_id=s1.id, name="Μαρία", title="Hair Stylist")
     st2 = Staff(shop_id=s1.id, name="Γιάννης", title="Hair Stylist")
     st3 = Staff(shop_id=s2.id, name="Νίκος", title="Barber")
     db.session.add_all([st1, st2, st3])
     db.session.commit()
 
+    # Υπηρεσίες (30’ όλες)
     sv = [
-        Service(shop_id=s1.id, name="Γυναικείο κούρεμα", duration_min=45, price_cents=2500),
-        Service(shop_id=s1.id, name="Βαφή", duration_min=90, price_cents=4500),
-        Service(shop_id=s1.id, name="Χτένισμα", duration_min=30, price_cents=1500),
-        Service(shop_id=s2.id, name="Ανδρικό κούρεμα", duration_min=30, price_cents=1300),
-        Service(shop_id=s2.id, name="Κούρεμα + Γένια", duration_min=45, price_cents=1700),
-        Service(shop_id=s2.id, name="Περιποίηση γενειάδας", duration_min=15, price_cents=600),
+        Service(shop_id=s1.id, name="Γυναικείο κούρεμα", duration_min=30, price_cents=2500),
+        Service(shop_id=s1.id, name="Βαφή",            duration_min=30, price_cents=4500),
+        Service(shop_id=s1.id, name="Χτένισμα",        duration_min=30, price_cents=1500),
+
+        Service(shop_id=s2.id, name="Ανδρικό κούρεμα",        duration_min=30, price_cents=1300),
+        Service(shop_id=s2.id, name="Κούρεμα + Γένια",        duration_min=30, price_cents=1700),
+        Service(shop_id=s2.id, name="Περιποίηση γενειάδας",   duration_min=30, price_cents=600),
     ]
     db.session.add_all(sv)
     db.session.commit()
 
-    # ✅ ΩΡΑΡΙΟ (αυτό πριν ήταν κατά λάθος μέσα στο send_booking_email)
-    def add_hours(staff):
-        for wd in [1, 2, 3, 4, 5]:  # Tue-Sat
-            db.session.add(StaffHours(staff_id=staff.id, weekday=wd, start_hm="10:00", end_hm="18:00"))
+    # Ωράριο υπαλλήλων: Δευ-Σαβ 10:00-18:00 (0=Δευ ... 6=Κυρ)
+    def add_staff_hours(staff_obj):
+        for wd in [0, 1, 2, 3, 4, 5]:
+            db.session.add(
+                StaffHours(staff_id=staff_obj.id, weekday=wd, start_hm="10:00", end_hm="18:00")
+            )
 
-    add_hours(st1)
-    add_hours(st2)
-    add_hours(st3)
+    add_staff_hours(st1)
+    add_staff_hours(st2)
+    add_staff_hours(st3)
     db.session.commit()
 
-    # ✅ REVIEWS (και αυτό πριν ήταν μέσα στο send_booking_email)
+    # Reviews
     db.session.add_all([
         Review(shop_id=s1.id, customer_name="Αλέξης", rating=5, comment="Τέλειο αποτέλεσμα!"),
-        Review(shop_id=s2.id, customer_name="Κώστας", rating=5, comment="Γρήγορο και προσεγμένο κούρεμα.")
+        Review(shop_id=s2.id, customer_name="Κώστας", rating=5, comment="Γρήγορο και προσεγμένο κούρεμα."),
     ])
     db.session.commit()
+
 
 
 
@@ -256,7 +318,6 @@ def send_booking_email(to_email: str, appt: Appointment, shop: Shop, staff: Staf
             server.starttls()
         server.login(user, password)
         server.send_message(msg)
-
 
 
 
@@ -469,7 +530,8 @@ def book_step4(sid: int):
 
     service = Service.query.get(st["service_id"])
     staff = Staff.query.get(st["staff_id"])
-    slots = available_slots(staff.id, st["appt_date"], service.duration_min)
+    slots = available_slots(staff.id, st["appt_date"], 30)
+
 
     if request.method == "POST":
         hm = (request.form.get("start_hm") or "").strip()
@@ -477,7 +539,7 @@ def book_step4(sid: int):
             flash("Διάλεξε διαθέσιμη ώρα.", "danger")
             return redirect(url_for("book_step4", sid=sid))
         st["start_hm"] = hm
-        st["end_hm"] = minutes_to_hm(hm_to_minutes(hm) + service.duration_min)
+        st["end_hm"] = minutes_to_hm(hm_to_minutes(hm) + 30)
         session.modified = True
         return redirect(url_for("book_confirm", sid=sid))
 
@@ -578,23 +640,19 @@ def admin_dashboard():
     if not admin_required():
         return redirect(url_for("admin_login"))
 
-    # Όλα τα καταστήματα για dropdown + λίστα
     shops = Shop.query.order_by(Shop.name.asc()).all()
 
-    # Ραντεβού
-    appts = Appointment.query.order_by(
-        Appointment.appt_date.desc(),
-        Appointment.start_hm.desc()
-    ).limit(100).all()
-
-    # ποιο shop είναι “επιλεγμένο” στο admin (με querystring)
     selected_shop_id = request.args.get("shop_id", type=int)
     if not selected_shop_id and shops:
         selected_shop_id = shops[0].id
 
-    # staff/services μόνο του επιλεγμένου shop (για να τα δείχνεις στην ίδια σελίδα)
+    selected_shop = Shop.query.get(selected_shop_id) if selected_shop_id else None
+
     staff = Staff.query.filter_by(shop_id=selected_shop_id, is_active=True).order_by(Staff.name.asc()).all() if selected_shop_id else []
     services = Service.query.filter_by(shop_id=selected_shop_id, is_active=True).order_by(Service.name.asc()).all() if selected_shop_id else []
+    hours = ShopHours.query.filter_by(shop_id=selected_shop_id).order_by(ShopHours.weekday.asc()).all() if selected_shop_id else []
+
+    appts = Appointment.query.order_by(Appointment.appt_date.desc(), Appointment.start_hm.desc()).limit(100).all()
 
     return render_template(
         "admin.html",
@@ -602,10 +660,34 @@ def admin_dashboard():
         shops=shops,
         appts=appts,
         selected_shop_id=selected_shop_id,
+        selected_shop=selected_shop,
         staff=staff,
         services=services,
+        hours=hours,
         cents_to_eur=cents_to_eur
     )
+
+@app.route("/admin/shop/<int:sid>/hours", methods=["POST"])
+def admin_shop_hours_save(sid: int):
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+
+    shop = Shop.query.get_or_404(sid)
+
+    # καθάρισμα παλιών
+    ShopHours.query.filter_by(shop_id=sid).delete()
+
+    # 0..6
+    for wd in range(7):
+        start = (request.form.get(f"start_{wd}") or "").strip()
+        end = (request.form.get(f"end_{wd}") or "").strip()
+        if start and end:
+            db.session.add(ShopHours(shop_id=sid, weekday=wd, start_hm=start, end_hm=end))
+
+    db.session.commit()
+    flash("✅ Αποθηκεύτηκε το ωράριο καταστήματος.", "success")
+    return redirect(url_for("admin_dashboard", shop_id=sid))
+
 
 @app.route("/admin/shops/new", methods=["POST"])
 def admin_shop_new():
@@ -631,8 +713,9 @@ def admin_shop_new():
         name=name, city=city, area=area, category=category,
         address=address, phone=phone, description=description, is_open=True
     )
-    db.session.add(s)
+    add_shop_hours(s.id)
     db.session.commit()
+
 
     flash("✅ Προστέθηκε κατάστημα.", "success")
     return redirect(url_for("admin_dashboard", shop_id=s.id))
@@ -675,18 +758,34 @@ def admin_staff_new():
 def admin_service_new():
     if not admin_required():
         return redirect(url_for("admin_login"))
+
     shop_id = int(request.form.get("shop_id") or 0)
     name = (request.form.get("name") or "").strip()
-    duration = int(request.form.get("duration") or 30)
-    price = (request.form.get("price") or "0").replace(",", ".")
+
+    # ✅ όλες οι υπηρεσίες 30 λεπτά
+    duration_min = 30
+
+    # ✅ υπολογισμός τιμής (ώστε να υπάρχει price_cents)
+    price_raw = (request.form.get("price") or "0").replace(",", ".")
     try:
-        price_cents = int(round(float(price) * 100))
+        price_cents = int(round(float(price_raw) * 100))
     except:
         price_cents = 0
+
     if not name or shop_id == 0:
-        flash("Δώσε κατάστημα και όνομα υπηρεσίας.", "danger"); return redirect(url_for("admin_dashboard"))
-    sv = Service(shop_id=shop_id, name=name, duration_min=max(5, duration), price_cents=max(0, price_cents), is_active=True)
-    db.session.add(sv); db.session.commit()
+        flash("Δώσε κατάστημα και όνομα υπηρεσίας.", "danger")
+        return redirect(url_for("admin_dashboard", shop_id=shop_id))
+
+    sv = Service(
+        shop_id=shop_id,
+        name=name,
+        duration_min=duration_min,
+        price_cents=max(0, price_cents),
+        is_active=True
+    )
+
+    db.session.add(sv)
+    db.session.commit()
     flash("✅ Προστέθηκε υπηρεσία.", "success")
     return redirect(url_for("admin_dashboard", shop_id=shop_id))
 
